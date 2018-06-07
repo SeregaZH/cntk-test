@@ -8,7 +8,6 @@ import os
 import numpy as np
 import shutil
 import struct
-import sys
 import math
 
 import cntk as C
@@ -34,20 +33,6 @@ def moving_average(a, w=5):
     if len(a) < w:
         return a[:]    # Need to send a copy of the array
     return [val if idx < w else sum(a[(idx-w):idx])/w for idx, val in enumerate(a)]
-
-def create_model(features, num_output_classes):
-    with C.layers.default_options(init=C.glorot_uniform(), activation=C.relu):
-            h = features
-            h = C.layers.Convolution2D(filter_shape=(5,5),
-                                       num_filters=8,
-                                       strides=(2,2),
-                                       pad=True, name='first_conv')(h)
-            h = C.layers.Convolution2D(filter_shape=(5,5),
-                                       num_filters=16,
-                                       strides=(2,2),
-                                       pad=True, name='second_conv')(h)
-            r = C.layers.Dense(num_output_classes, activation=None, name='classify')(h)
-            return r
 
 def plot_learning(plotdata): 
     # Compute the moving average loss to smooth out the noise in SGD
@@ -134,23 +119,22 @@ class Trainer:
 
         return mb, training_loss, eval_error
 
-def Main(argv):
-
-    NUM_TRAIN_SAMPLES = 60000
-    NUM_TEST_SAMPLES = 10000
-    INPUT_DIM_MODEL = (1, 28, 28)
-    INPUT_DIM = 28*28
-    NUM_OUTPUT_CLASSES = 10
-    LEARNING_RATE = 0.2
-    MINIBATCH_SIZE = 64
-    NUM_SAMPLES_PER_SWEEP = 60000
-    NUM_SWEEP_TO_TRAIN = 5
+def run_model(create_model_fn, **params):
+    NUM_TRAIN_SAMPLES = params.get('NUM_TRAIN_SAMPLES', 60000)
+    NUM_TEST_SAMPLES = params.get('NUM_TEST_SAMPLES', 10000)
+    INPUT_DIM_MODEL = params.get('INPUT_DIM_MODEL', 28*28)
+    INPUT_DIM = params.get('INPUT_DIM', 28*28)
+    NUM_OUTPUT_CLASSES = params.get('NUM_OUTPUT_CLASSES', 10)
+    LEARNING_RATE = params.get('LEARNING_RATE', 0.2)
+    MINIBATCH_SIZE = params.get('MINIBATCH_SIZE', 64)
+    NUM_SAMPLES_PER_SWEEP = params.get('NUM_SAMPLES_PER_SWEEP', 60000)
+    NUM_SWEEP_TO_TRAIN = params.get('NUM_SWEEP_TO_TRAIN', 10)
 
     train_file, test_file = load_and_save(NUM_TRAIN_SAMPLES, NUM_TEST_SAMPLES)
 
     input = C.input_variable(INPUT_DIM_MODEL)
     label = C.input_variable(NUM_OUTPUT_CLASSES)
-    z = create_model(input/255.0, NUM_OUTPUT_CLASSES)
+    z = create_model_fn(input/255.0, NUM_OUTPUT_CLASSES, **params)
     loss = C.cross_entropy_with_softmax(z, label)
     label_error = C.classification_error(z, label)
     lr_schedule = learning_rate_schedule(LEARNING_RATE, UnitType.minibatch)
@@ -170,7 +154,7 @@ def Main(argv):
     plotdata = tr.train(input_map)
     plot_learning(plotdata)
 
-        # Read the training data
+    # Read the training data
     reader_test = create_reader(test_file, False, INPUT_DIM, NUM_OUTPUT_CLASSES)
 
     test_input_map = {
@@ -179,6 +163,4 @@ def Main(argv):
     }
 
     test_model(test_input_map, reader_test, trainer, NUM_TEST_SAMPLES, 512)
-
-if __name__ == '__main__':
-    sys.exit(Main(sys.argv))
+    return z

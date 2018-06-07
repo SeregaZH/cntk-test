@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>481e9284-fdea-4eba-8092-3b71706cee95</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>test-cntk.py</StartupFile>
+    <StartupFile>convolution_net.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,10 +21,19 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="layered_net.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="mnist_data_loader.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="test-cntk.py" />
+    <Compile Include="mnist_model_runner.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="convolution_net.py" />
+    <Compile Include="one_layer_net.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Content Include="requirements.txt" />
