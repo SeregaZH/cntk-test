@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="full_net.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="layered_net.py">
       <SubType>Code</SubType>
     </Compile>
