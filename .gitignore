@@ -104,3 +104,4 @@ venv.bak/
 .mypy_cache/
 Examples/
 .vs/
+/TestCntk/TestCntk/f_params.csv

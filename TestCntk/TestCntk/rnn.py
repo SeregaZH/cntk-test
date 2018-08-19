@@ -18,6 +18,7 @@ C.cntk_py.set_fixed_random_seed(1) # fix a random seed for CNTK components
 
 # Set a random seed
 np.random.seed(123)
+NUM_DAYS_BACK = 8
 
 def get_stock_data(contract, s_year, s_month, s_day, e_year, e_month, e_day):
     """
@@ -39,18 +40,18 @@ def get_stock_data(contract, s_year, s_month, s_day, e_year, e_month, e_day):
 
     while(retry_cnt < max_num_retry):
         try:
-            bars = data.DataReader(contract,"iex", start, end)
+            bars = data.DataReader(contract,'stooq', start, end)
             return bars
         except:
             retry_cnt += 1
             time.sleep(np.random.randint(1,10))
 
-    print("IEX is not reachable")
-    raise Exception('IEX is not reachable')
+    print("Stooq is not reachable")
+    raise Exception('Stooq is not reachable')
 
 def download(data_file):
     try:
-        data = get_stock_data("SPY", 2013, 1,2,2017,1,1)
+        data = get_stock_data("^DJI", 2013, 1,2,2018,1,1)
     except:
         raise Exception("Data could not be downloaded")
 
@@ -65,8 +66,33 @@ def download(data_file):
             pkl.dump(data, f, protocol = 2)
     return data
 
-data_file = os.path.join("data", "Stock", "stock_SPY.pkl")
-test_file = os.path.join("test", "Stock", "stock_SPY.pkl")
+def build_features(data): 
+    # Feature name list
+    predictor_names = []
+
+    # Compute price difference as a feature
+    data["diff"] = np.abs((data["Close"] - data["Close"].shift(1)) / data["Close"]).fillna(0)
+    predictor_names.append("diff")
+
+    # Compute the volume difference as a feature
+    data["v_diff"] = np.abs((data["Volume"] - data["Volume"].shift(1)) / data["Volume"]).fillna(0)
+    predictor_names.append("v_diff")
+
+    for i in range(1, NUM_DAYS_BACK + 1):
+        data["p_" + str(i)] = np.where(data["Close"] > data["Close"].shift(i), 1, 0) # i: number of look back days
+        predictor_names.append("p_" + str(i))
+    
+    data["next_day"] = np.where(data["Close"].shift(-1) > data["Close"], 1, 0)
+    data["next_day_opposite"] = np.where(data["next_day"]==1, 0, 1)
+    train_data = data["2015-01-20":"1990-02-05"]
+    train_test = data["2018-01-20":"2015-01-25"]
+
+    # If you want to save the file to your local drive
+    data.to_csv("f_params.csv")
+    return predictor_names, train_data, train_test
+
+data_file = os.path.join("data", "Stock", "stock_DJI.pkl")
+test_file = os.path.join("test", "Stock", "stock_DJI.pkl")
 
 def Main(argv):
    # Check for data in local cache
@@ -81,11 +107,13 @@ def Main(argv):
             data = pd.read_pickle(data_file)
          else:
             print("Test data directory missing file", test_file)
-            print("Downloading data from IEX")
+            print("Downloading data from stooq")
             data = download(data_file)
    else:
         data = download(data_file)
-    
+   features_names, training_data, test_data = build_features(data);
+   training_features = np.asarray(training_data[predictor_names], dtype = "float32")
+   training_labels = np.asarray(training_data[["next_day","next_day_opposite"]], dtype="float32")
 
 if __name__ == '__main__':
     sys.exit(Main(sys.argv))
